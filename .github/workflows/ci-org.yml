@@ -1,0 +1,27 @@
+name: CI Pipeline
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  security:
+    uses: cyclopt-pc/security-template/.github/workflows/security-checks.yml@actions
+    secrets: inherit
+
+  testing:
+    needs: security
+    uses: ./.github/workflows/testing.yml
+    secrets: inherit
+
+  release:
+    needs: [security, testing]
+    if: |
+      always() &&
+      (github.ref == 'refs/heads/main') &&
+      ((needs.testing.result == 'success' || needs.testing.result == 'skipped') && needs.security.result == 'success')
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
