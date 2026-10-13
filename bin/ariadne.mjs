@@ -167,7 +167,7 @@ const has = key => flags.includes(key);
 const configDir=()=>process.env.ARIADNE_OPENCODE_DIR||path.join(os.homedir(),'.config','opencode');
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 function readJson(file, fallback=null) { try { return JSON.parse(fs.readFileSync(file,'utf8')); } catch(e) { if(e.code==='ENOENT')return fallback; throw new Error(`Cannot parse ${file}: ${e.message}`); } }
-function atomic(file,data) { fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700}); const tmp=`${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;try {fs.writeFileSync(tmp,data,{mode:0o600,flag:'wx'});fs.renameSync(tmp,file);}catch(error){try{fs.unlinkSync(tmp)}catch{}throw error;} }
+function atomic(file,data) { fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700}); const tmp=`${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;try {fs.writeFileSync(tmp,data,{mode:0o600,flag:'wx'});fs.renameSync(tmp,file);}catch(error){fs.rmSync(tmp,{force:true});throw error;} }
 function json(file,data) { atomic(file,JSON.stringify(data,null,2)+'\n'); }
 function session(ctx) { const s=readJson(ctx.SESSION); if(!s?.token)throw Error('Not logged in; run login first.'); if(s.api!==ctx.API_BASE)throw Error(`Your session belongs to ${s.api}. Set ARIADNE_API_BASE_URL=${s.api} or log in again.`);return s; }
 async function get(ctx,route) { const s=session(ctx);const r=await fetch(ctx.API_BASE+route,{headers:{Authorization:`Bearer ${s.token}`},signal:AbortSignal.timeout(15000)});const payload=await r.json().catch(()=>({}));if(!r.ok)throw Error(`${route}: ${payload.error||`HTTP ${r.status}`}`);return payload; }
