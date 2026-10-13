@@ -10,7 +10,7 @@ import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 
 const AUTH0_DOMAIN = 'platform-cyclopt.eu.auth0.com';
-const AUTH0_CLIENT_ID = 'qzhyM1MlB8nnmIP31iMF2sRdHJMKleT4';
+const AUTH0_CLIENT_ID = 'qzhyM1MlB8nnmIP31iMF2sRdHJMKleT4'; // gitleaks:allow
 const API_BASE = (process.env.ARIADNE_API_BASE_URL || 'https://ariadne.cyclopt.com/backend').replace(/\/$/, '');
 const PORT = 8765;
 const CALLBACK = `http://127.0.0.1:${PORT}/callback`;
