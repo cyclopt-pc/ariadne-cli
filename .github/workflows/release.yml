@@ -1,0 +1,63 @@
+name: Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run check && npm test
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.10'
+      - name: Determine next patch version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          if [[ -n "$(git tag --points-at HEAD 'v*' | head -1)" ]]; then
+            echo 'Already tagged. Nothing to release.'
+            echo 'skip=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)"
+          if [[ -z "$latest" ]]; then
+            next='v0.1.0'
+          else
+            raw="${latest#v}"
+            IFS='.' read -r major minor patch <<< "$raw"
+            next="v${major}.${minor}.$((patch+1))"
+          fi
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+          echo "version=${next#v}" >> "$GITHUB_OUTPUT"
+      - name: Compile standalone binaries
+        if: steps.version.outputs.skip != 'true'
+        env:
+          ARIADNE_CLI_VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/build.sh
+      - name: Verify Linux executable
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          ./dist/ariadne-linux-x64 --version
+          ./dist/ariadne-linux-x64 --help
+      - name: Create GitHub Release
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" dist/ariadne-* dist/SHA256SUMS \
+            --target "$GITHUB_SHA" --generate-notes --title "$TAG"
