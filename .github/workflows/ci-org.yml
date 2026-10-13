@@ -22,7 +22,7 @@ jobs:
     if: |
       always() &&
       (github.ref == 'refs/heads/main') &&
-      ((needs.testing.result == 'success' || needs.testing.result == 'skipped') && needs.security.result == 'success')
+      (needs.testing.result == 'success' && needs.security.result == 'success')
     permissions:
       contents: write
     uses: ./.github/workflows/release.yml
