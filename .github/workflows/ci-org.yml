@@ -8,21 +8,21 @@ permissions:
   pull-requests: read
 
 jobs:
-  security:
-    uses: cyclopt-pc/security-template/.github/workflows/security-checks.yml@actions
+  gitleaks:
+    uses: ./.github/workflows/gitleaks.yml
     secrets: inherit
 
   testing:
-    needs: security
+    needs: gitleaks
     uses: ./.github/workflows/testing.yml
     secrets: inherit
 
   release:
-    needs: [security, testing]
+    needs: [gitleaks, testing]
     if: |
       always() &&
       (github.ref == 'refs/heads/main') &&
-      (needs.testing.result == 'success' && needs.security.result == 'success')
+      (needs.testing.result == 'success' && needs.gitleaks.result == 'success')
     permissions:
       contents: write
     uses: ./.github/workflows/release.yml
