@@ -29,11 +29,44 @@ function writeSession(data) {
   fs.renameSync(tmp, SESSION);
   fs.chmodSync(SESSION, 0o600);
 }
+
 function openBrowser(url) {
-  const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open';
-  const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
-  const child = spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true });
-  child.on('error', () => {});
+  let cmd;
+  let args;
+
+  if (process.platform === 'darwin') {
+    cmd = 'open';
+    args = [url];
+  } else if (process.platform === 'win32') {
+    // Use PowerShell Start-Process instead of cmd /c start.
+    // EncodedCommand avoids CMD parsing of OAuth query parameters.
+    const escapedUrl = url.replace(/'/g, "''");
+    const script = `Start-Process -FilePath '${escapedUrl}'`;
+
+    cmd = 'powershell.exe';
+    args = [
+      '-NoProfile',
+      '-NonInteractive',
+      '-EncodedCommand',
+      Buffer.from(script, 'utf16le').toString('base64')
+    ];
+  } else {
+    cmd = 'xdg-open';
+    args = [url];
+  }
+
+  const child = spawn(cmd, args, {
+    stdio: 'ignore',
+    windowsHide: true
+  });
+
+  child.on('error', (error) => {
+    console.error(
+      'Failed to open browser:',
+      error.message
+    );
+  });
+
   child.unref();
 }
 async function post(url, data) {
